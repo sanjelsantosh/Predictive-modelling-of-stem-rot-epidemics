@@ -1,1 +1,120 @@
+# This code produces the summary of hours of the specific conditions in a defined window 
+# Use hourly data for this code
+######  this script will generate number of hours between two temperatures 22-35°C (contd..)
+#       for the provided windows   
+##        
 
+library(tidyverse)
+library(lubridate)
+library(magrittr)
+library(Dict)
+#Importing Data --------------------------------------------------------------(1)
+fawn_all <- read_csv("data/hourlyWeatherAvg/fAWN/FAWN_hrly_mod.csv", 
+                     col_types = cols(Period = col_datetime(format = "%m/%d/%Y %H:%M")))
+
+
+#subset for location  
+fawn <- fawn_all %>% 
+  filter(`FAWN Station` %in% "Quincy") #--------------------------------change loc here (1)
+fawn <- data.frame(fawn)
+table(fawn$FAWN.Station)
+
+##Need day for grouping; careful with date formating
+fawn$days <- floor_date(fawn$Period, "day")
+fawn$weeks <- floor_date(fawn$Period, "week")
+fawn$months <- floor_date(fawn$Period, "month")
+fawn$hours <- floor_date(fawn$Period + 1, "hours")
+names(fawn)
+#this function returns the hour count between two dates satisfying
+#specific conditions. Enter start date, end date, Relative 
+#humidity (inclusive), average Temperature low and high(inclusive) if needed
+numberOfHours <- function(start_date, end_date, start_time, end_time, 
+                          RH, avgTempLow=NULL, avgTempHigh = NULL){
+  fawnSubset <- fawn %>%
+    subset(days > start_date & days <= end_date & RH_mean >= RH)
+  
+  
+  if(start_time > 24 || start_time < 0 || end_time > 24 || end_time < 0){
+    stop('Please choose time that is from 0-24')
+  }
+  
+  if(start_time > end_time){
+    fawnTime1 <- subset(fawnSubset, hour(fawnSubset$hours) >= start_time)
+    fawnTime2 <- subset(fawnSubset, hour(fawnSubset$hours) <= end_time)
+    fawnSubset <- rbind(fawnTime1, fawnTime2)
+  } else {
+    fawnSubset <- subset(fawnSubset, hour(fawnSubset$hours) >= start_time & hour(fawnSubset$hours) <= end_time)
+  }
+  
+  if(is.null(avgTempLow)==TRUE){
+    timePeriod <- paste(start_date,' to ', end_date)
+    tally <- dim(fawnSubset)[1]
+    answer <- cbind(timePeriod, tally)
+  } else {
+    fawnSubset <- fawnSubset %>%
+      subset(TsoilAvg10cmC  >= avgTempLow & TsoilAvg10cmC <= avgTempHigh) ## average soil temperature below (specify in call section)
+    
+    timePeriod <- paste(start_date,' to ', end_date)
+    tally <- dim(fawnSubset)[1]
+    answer <- cbind(timePeriod, tally)
+  }
+  
+  return(answer)
+}  
+#  Just to check which data is being used
+#####################################################################################
+
+start_to_end_data <- read.csv("data/qcy_days_prior_to_loop_input.csv", header = T)
+disease_scoring_dates <- as.Date(start_to_end_data$Disease.scoring.dates, format = "%m/%d/%Y")  
+
+#check selected windows: old ones
+# start_dba <- c(29, 33, 22, 26, 15, 19, 8, 12)
+# end_dba <- rep(c(1,5), times = 4)
+start_dba <- c(35, 33, 29, 28, 26, 22, 21, 19, 15, 14, 12, 8)
+end_dba <- rep(c(7, 5 ,1), times = 4)
+sne <- cbind(start_dba, end_dba)
+
+results <- Dict$new(.override=TRUE)
+j<-0                                #Dictionary key used first column as 0
+for (k in 1:nrow(sne)){
+  store<-rep(NA,nrow(start_to_end_data))
+  for (dd in 1: length(disease_scoring_dates)){
+    x=sne[k,]['start_dba']
+    y=sne[k,]['end_dba']
+    start_d <-as.Date (disease_scoring_dates[dd] - x, format= "%m/%d/%Y")
+    end_d <- as.Date (disease_scoring_dates[dd] - y, format = "%m/%d/%Y")
+    
+    
+    store[dd] <- list(numberOfHours(start_d, end_d, 0, 24, 0, 25, 100)) # MODIFY HERE
+    
+  }
+  results [as.character(j)] <- store
+  j<-j+1
+}
+results$remove(".override")
+
+ff_store = results$get("0")
+
+results_df <- Dict$new(.override=TRUE)
+final_output=data.frame(c(1:12))
+
+for(i in results$keys){
+  store = results$get(i)
+  
+  store_df <- data.frame(matrix(unlist(store), nrow=nrow(start_to_end_data), byrow=T)) %>%
+    `colnames<-`(c("timePeriod", "Total"))
+  results_df [i] <- store_df
+  final_output[i] <- unlist(store_df["Total"],use.names=FALSE)
+}
+
+results_df$remove(".override")
+final_output
+
+## get results using keys("0","1"....."7") from results_df 
+# results_df$get(8)
+mget(ls(results_df), envir = results_df)
+r_store <- final_output[, 2:13]
+colnames(r_store) <- paste("nHrSTb20", c(28, 28, 28, 21, 21, 21, 14, 14, 14, 7, 7, 7), start_dba, end_dba, sep="_")
+#r_store
+#### change here for appropriate directory
+#write.csv(r_store, file = "output_10-18/lo/13lonHraST30allW.csv", row.names = FALSE)
