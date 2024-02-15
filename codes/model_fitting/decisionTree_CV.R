@@ -1,4 +1,4 @@
-# Cross validation accuracy
+# Decision tree fitting with 10, 5, 20 and LOOCV cross validation methods
 
 library(tidyverse)
 library(lattice)

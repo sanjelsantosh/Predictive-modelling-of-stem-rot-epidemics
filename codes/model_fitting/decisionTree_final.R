@@ -1,4 +1,4 @@
-# plot the decision tree
+# plot the decision tree and save it
 
 library(tidyverse)
 library(lattice)

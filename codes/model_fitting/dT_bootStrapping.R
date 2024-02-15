@@ -1,5 +1,5 @@
 # test ML models 1) Decision Tree
-# this program runs decision tree model with bootsstraping 
+# this program runs decision tree model with bootstrapping 
 
 library(tidyverse)
 library(boot)

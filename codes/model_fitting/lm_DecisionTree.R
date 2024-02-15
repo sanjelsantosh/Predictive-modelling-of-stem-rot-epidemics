@@ -1,4 +1,4 @@
-# James corrected model for decision tree
+#Table 2 in the paper: Single-variable and multiple-variable model fit summary represented by the decision trees
 
 library(dplyr)
 library(readxl)
