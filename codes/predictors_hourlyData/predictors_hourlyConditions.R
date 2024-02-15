@@ -1,1 +1,0 @@
-# This code generates predictors using hourly data
