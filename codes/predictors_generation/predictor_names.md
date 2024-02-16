@@ -1,4 +1,4 @@
-Following list provides the list of predictors naming rule and their description
+Following list provides the predictors naming rule and their description
 | Predictor class | Acronym | Description |
 | --- | --- | --- |
 | Soil temperature (ST) (soil depth 0.05 m) | TT | Thermal time (base T=0) |
